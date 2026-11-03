@@ -1,7 +1,17 @@
+# root/advanced-subnet-calculator.py
 import tkinter as tk
 from tkinter import ttk, messagebox
 import ipaddress
 import math
+
+
+def usable_ipv4_range(network):
+    """Return first, last and count for RFC 3021 /31 and host /32 networks."""
+    if network.prefixlen == 32:
+        return network.network_address, network.network_address, 1
+    if network.prefixlen == 31:
+        return network.network_address, network.broadcast_address, 2
+    return network.network_address + 1, network.broadcast_address - 1, network.num_addresses - 2
 
 class SubnetCalculator:
     def __init__(self, root):
@@ -203,7 +213,7 @@ class SubnetCalculator:
             ip = ipaddress.IPv4Address(ip_str)
             binary = format(int(ip), '032b')
             return f"{binary[:8]}.{binary[8:16]}.{binary[16:24]}.{binary[24:]}"
-        except:
+        except (ValueError, ipaddress.AddressValueError):
             return "Invalid IP"
     
     def calculate_subnet(self):
@@ -227,7 +237,7 @@ class SubnetCalculator:
             
             # Calculate additional information
             total_hosts = network.num_addresses
-            usable_hosts = total_hosts - 2 if total_hosts > 2 else 0
+            first_usable, last_usable, usable_hosts = usable_ipv4_range(network)
             
             # Basic information
             basic_info = f"""Network Information:
@@ -240,8 +250,8 @@ Wildcard Mask:        {network.hostmask}
 CIDR Notation:        /{network.prefixlen}
 
 IP Range:             {network.network_address} - {network.broadcast_address}
-First Usable IP:      {network.network_address + 1 if usable_hosts > 0 else 'N/A'}
-Last Usable IP:       {network.broadcast_address - 1 if usable_hosts > 0 else 'N/A'}
+First Usable IP:      {first_usable}
+Last Usable IP:       {last_usable}
 
 Total Addresses:      {total_hosts:,}
 Usable Host IPs:      {usable_hosts:,}
